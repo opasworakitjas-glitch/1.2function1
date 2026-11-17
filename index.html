@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ห้องทดลองคณิตศาสตร์ 3D & 2D: ฟังก์ชันกำลังสอง</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root{--p:#4f46e5;--t:#1e293b;--m:#64748b}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Prompt',sans-serif;color:var(--t);background:linear-gradient(135deg,#eef2ff,#e0f2fe 55%,#fdf2f8);min-height:100vh}
+.hide{display:none!important}
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:16px}
+.glass{background:rgba(255,255,255,.72);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.85);border-radius:22px;box-shadow:0 10px 40px rgba(79,70,229,.12)}
+.mu{color:var(--m);font-size:13px}
+.sp{width:38px;height:38px;border:4px solid #c7d2fe;border-left-color:var(--p);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(99,102,241,.55)}100%{box-shadow:0 0 0 14px rgba(99,102,241,0)}}
+.fm{width:100%;max-width:400px;padding:30px}
+.fm h1{font-size:24px;margin-bottom:4px}
+.fm label{display:block;font-size:13px;margin:14px 0 4px}
+.in{width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:12px;font:inherit;background:rgba(255,255,255,.9);outline:none;transition:.2s}
+.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(79,70,229,.2)}
+.btn{border:0;cursor:pointer;font:600 15px Prompt,sans-serif;padding:11px 18px;border-radius:12px;color:#fff;background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 6px 18px rgba(79,70,229,.3);transition:.2s}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.6}
+.gb{border:1px solid rgba(203,213,225,.8);background:rgba(255,255,255,.88);border-radius:10px;padding:6px 11px;font:500 12px Prompt,sans-serif;cursor:pointer;color:var(--t);transition:.2s;white-space:nowrap}
+.gb:hover{background:#fff;border-color:var(--p)}
+.gb.on{background:var(--p);color:#fff;border-color:var(--p)}
+.top{margin:12px 16px 0;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.top h2{font-size:19px}
+.lay{display:grid;grid-template-columns:1fr 430px;gap:16px;padding:12px 16px 16px;height:calc(100vh - 76px)}
+#stage{position:relative;overflow:hidden;min-height:420px;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.96),rgba(224,231,255,.65))}
+.stage-bar{position:relative;z-index:5;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;padding:12px 14px;background:rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.75);backdrop-filter:blur(8px)}
+.presets-bar,.tools-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.canvas-wrap{position:relative;flex:1;width:100%;height:100%;overflow:hidden}
+#view,#view2d{position:absolute;inset:0;width:100%;height:100%}
+#view canvas,#view2d canvas{display:block;width:100%!important;height:100%!important;outline:none}
+#hs{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+.hs{position:absolute;left:0;top:0;border:0;background:none;display:flex;align-items:center;gap:6px;cursor:pointer;pointer-events:auto;font:500 12px Prompt,sans-serif;color:var(--t)}
+.hs i{width:15px;height:15px;border-radius:50%;background:#fff;border:4px solid var(--c);animation:pulse 2s infinite}
+.hs span{background:rgba(255,255,255,.92);padding:2px 9px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.hs:hover span{background:var(--c);color:#fff}
+.hint{position:absolute;right:14px;bottom:10px;font-size:11px;color:var(--m);text-align:right;background:rgba(255,255,255,.75);padding:4px 10px;border-radius:10px;z-index:3}
+.card{position:absolute;left:16px;bottom:16px;width:min(330px,calc(100% - 32px));padding:16px 20px;opacity:0;transform:translateY(16px) scale(.97);pointer-events:none;transition:.35s cubic-bezier(.2,.8,.2,1);z-index:6;border-radius:18px;background:rgba(255,255,255,.95)}
+.card.on{opacity:1;transform:none;pointer-events:auto}
+.card h4{font-size:15px;color:var(--p);margin-bottom:6px}
+.card p{font-size:13px;line-height:1.65}
+.card .x{position:absolute;right:10px;top:8px;border:0;background:none;cursor:pointer;font-size:14px;color:var(--m)}
+.side{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.eq{padding:16px 18px;border-radius:16px;color:#fff;background:linear-gradient(135deg,#4f46e5,#2563eb)}
+.eq small{color:#c7d2fe;font-size:11px}
+.m{font-family:'Cambria Math','Times New Roman',serif;font-style:italic;font-weight:700;font-size:21px;margin:2px 0 8px}
+.tabs{display:flex;gap:6px;background:rgba(255,255,255,.65);padding:4px;border-radius:14px}
+.tab{flex:1;border:0;background:none;padding:8px;border-radius:11px;font:500 13px Prompt,sans-serif;cursor:pointer;color:var(--m);transition:.25s}
+.tab.on{background:#fff;color:var(--p);box-shadow:0 2px 10px rgba(79,70,229,.15)}
+.pane:not(.hide){animation:fade .4s}
+.row{display:grid;grid-template-columns:44px 1fr 74px;gap:10px;align-items:center;margin:10px 0}
+.row .in{padding:6px;text-align:center;font-weight:700;color:var(--p)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:#c7d2fe}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:20px;width:20px;border-radius:50%;background:var(--p);margin-top:-6px;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:#c7d2fe}
+input[type=range]::-moz-range-thumb{height:20px;width:20px;border:0;border-radius:50%;background:var(--p)}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.pg div{background:rgba(255,255,255,.85);border-radius:12px;padding:10px 12px;border:1px solid #e2e8f0}
+.pg small{display:block;color:var(--m);font-size:11px}
+.pg b{font-size:14px}
+.w2{grid-column:span 2}
+.sample-box{background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#3730a3;line-height:1.55;margin-top:12px}
+.mis{background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:14px;font-size:14px;line-height:1.7;margin-bottom:14px}
+#cr{margin-top:12px;padding:12px;border-radius:12px;text-align:center;font-size:14px;animation:fade .4s}
+#cr.ok{background:#dcfce7;color:#166534}
+#cr.no{background:#fee2e2;color:#991b1b}
+.qi{margin-bottom:18px;font-size:14px;font-weight:500}
+.opt{display:block;width:100%;text-align:left;padding:9px 12px;margin-top:6px;border:1px solid #cbd5e1;background:#fff;border-radius:10px;font:400 13px Prompt,sans-serif;cursor:pointer;transition:.2s}
+.opt:hover:not(:disabled){background:#eef2ff;border-color:var(--p)}
+.opt.ok{background:#dcfce7;border-color:#22c55e}
+.opt.no{background:#fee2e2;border-color:#ef4444}
+.ex{display:none;margin-top:8px;padding:10px 12px;border-left:4px solid var(--p);background:#eef2ff;border-radius:8px;font-size:12.5px;line-height:1.6;font-weight:400}
+.ex.on{display:block;animation:fade .4s}
+#am{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.45);z-index:50;padding:16px}
+#adm{min-height:100vh;padding:16px}
+.tw{overflow-x:auto;margin-top:16px;background:#fff;border-radius:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#f1f5f9;text-align:left;padding:12px 16px;color:var(--m)}
+td{padding:11px 16px;border-top:1px solid #f1f5f9}
+@media(max-width:960px){.lay{display:block;height:auto}#stage{height:68vh;margin-bottom:16px}.top h2{font-size:15px}.hint{display:none}}
+</style>
+</head>
+<body>
+<div id="ld" class="center"><div class="sp"></div><p class="mu" style="margin-top:14px">กำลังเชื่อมต่อระบบ...</p></div>
+
+<div id="rg" class="center hide">
+<form class="glass fm" onsubmit="handleRegistration(event)">
+<h1>📐 ลงทะเบียนเข้าเรียน</h1>
+<p class="mu">ห้องทดลอง 3D & 2D: ฟังก์ชันกำลังสอง</p>
+<p id="ofl" class="mu hide" style="color:#b45309;margin-top:8px">โหมดออฟไลน์: ข้อมูลจะไม่ถูกบันทึกลงฐานข้อมูล</p>
+<label>ชื่อ - นามสกุล</label>
+<input id="rn" class="in" required placeholder="เช่น เด็กชายรักเรียน ขยันยิ่ง">
+<label>รหัสนักเรียน</label>
+<input id="ri" class="in" required placeholder="เช่น 64001">
+<label>ชั้นเรียน / ห้อง</label>
+<input id="rc" class="in" required placeholder="เช่น ม.4/1">
+<button id="rb" class="btn" style="width:100%;margin-top:20px">เข้าสู่บทเรียน</button>
+</form>
+</div>
+
+<div id="app" class="hide">
+<header class="glass top">
+<div><h2>🧊 ห้องทดลองคณิตศาสตร์: ฟังก์ชันกำลังสอง</h2><p class="mu">ยินดีต้อนรับ, <b id="un"></b></p></div>
+<button class="gb" onclick="showAdminModal()">🔒 หลังบ้าน</button>
+</header>
+<div class="lay">
+<section id="stage" class="glass">
+<div class="stage-bar">
+<div class="presets-bar">
+<span style="font-size:12px;font-weight:600;color:var(--p);margin-right:2px">📌 กราฟตัวอย่าง:</span>
+<button class="gb preset-btn on" onclick="applyPreset(0,this)">1. พาราโบลาพื้นฐาน</button>
+<button class="gb preset-btn" onclick="applyPreset(1,this)">2. กราฟหงาย 2 ราก</button>
+<button class="gb preset-btn" onclick="applyPreset(2,this)">3. กราฟคว่ำจุดสูงสุด</button>
+<button class="gb preset-btn" onclick="applyPreset(3,this)">4. สัมผัสแกน X (1 ราก)</button>
+<button class="gb preset-btn" onclick="applyPreset(4,this)">5. เส้นตรง (a = 0)</button>
+</div>
+<div class="tools-bar">
+<button class="gb" id="btn3d" onclick="setMode('3d')">🧊 มุมมอง 3D</button>
+<button class="gb on" id="btn2d" onclick="setMode('2d')">📈 มุมมอง 2D (ชัดเจน)</button>
+<button class="gb" id="bar" onclick="toggleRot()">↻ หมุนอัตโนมัติ</button>
+<button class="gb" onclick="resetCam()">⌖ รีเซ็ตกล้อง</button>
+<button class="gb" onclick="saveGhost()">👻 บันทึกรอยเดิม</button>
+<button class="gb" onclick="clearGhost()">🗑 ลบรอย</button>
+</div>
+</div>
+<div class="canvas-wrap">
+<div id="view" class="hide"></div>
+<div id="view2d"><canvas id="c2d"></canvas></div>
+<div id="hs" class="hide"></div>
+<div id="card" class="card glass"></div>
+<div class="hint" id="hint-txt">โหมด 2D: แสดงพิกัดแกน X, Y จุดยอด และจุดตัดอย่างชัดเจน</div>
+</div>
+</section>
+<aside class="side glass">
+<div class="eq">
+<small>รูปทั่วไป y = ax² + bx + c</small>
+<div class="m" id="eg">y = x²</div>
+<small>รูปมาตรฐาน y = a(x − h)² + k</small>
+<div class="m" id="es" style="margin-bottom:0">y = x²</div>
+</div>
+<div class="tabs">
+<button class="tab on" onclick="tab(0)">ปรับตัวแปร</button>
+<button class="tab" onclick="tab(1)">ภารกิจ</button>
+<button class="tab" onclick="tab(2)">แบบทดสอบ</button>
+</div>
+<div class="pane">
+<div style="display:flex;justify-content:space-between;align-items:center"><b>ตัวแปร (Variables)</b><button class="gb" onclick="resetValues()">รีเซ็ต</button></div>
+<div class="row"><b>ค่า a</b><input type="range" id="slide-a" min="-5" max="5" step="0.1" value="1"><input type="number" id="num-a" class="in" min="-5" max="5" step="0.1" value="1"></div>
+<div class="row"><b>ค่า b</b><input type="range" id="slide-b" min="-10" max="10" step="1" value="0"><input type="number" id="num-b" class="in" min="-10" max="10" step="1" value="0"></div>
+<div class="row"><b>ค่า c</b><input type="range" id="slide-c" min="-10" max="10" step="1" value="0"><input type="number" id="num-c" class="in" min="-10" max="10" step="1" value="0"></div>
+<div class="pg">
+<div><small>จุดยอด (Vertex)</small><b id="pv">(0, 0)</b></div>
+<div><small>จุดตัดแกน Y</small><b id="py">(0, 0)</b></div>
+<div class="w2"><small>จุดตัดแกน X (Roots)</small><b id="px">x = 0</b></div>
+<div><small>โดเมน (Domain)</small><b>จำนวนจริง (R)</b></div>
+<div><small>เรนจ์ (Range)</small><b id="pr">y ≥ 0</b></div>
+</div>
+<div class="sample-box" id="preset-desc">
+<b>💡 คำอธิบายตัวอย่าง:</b> พาราโบลาพื้นฐาน (y = x²) กราฟหงาย มีจุดต่ำสุด (จุดยอด) อยู่ที่จุดกำเนิด (0, 0)
+</div>
+</div>
+<div class="pane hide">
+<div class="mis"><b>⚡ ภารกิจท้าทาย</b><br>ปรับค่า <b>a, b, c</b> ให้กราฟมี <b>จุดยอดที่ (2, −3)</b> และเป็น <b>กราฟหงาย</b></div>
+<button class="btn" style="width:100%" onclick="checkChallenge()">ตรวจคำตอบภารกิจ</button>
+<div id="cr" class="hide"></div>
+</div>
+<div class="pane hide">
+<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>แบบทดสอบความเข้าใจ</b><span class="mu" id="qs">คะแนน 0/3</span></div>
+<div id="qz"></div>
+</div>
+</aside>
+</div>
+</div>
+
+<div id="am" class="hide">
+<div class="glass fm" style="max-width:360px;padding:24px">
+<h3>เข้าสู่ระบบหลังบ้าน</h3>
+<p class="mu" style="margin:6px 0 12px">กรุณากรอกรหัสผ่านเพื่อเข้าสู่ Admin Dashboard</p>
+<input type="password" id="ap" class="in" placeholder="รหัสผ่าน">
+<p id="ae" class="hide" style="color:#dc2626;font-size:13px;margin-top:8px">รหัสผ่านไม่ถูกต้อง!</p>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="gb" onclick="closeAdminModal()">ยกเลิก</button><button class="btn" style="padding:8px 16px" onclick="verifyAdminPassword()">เข้าสู่ระบบ</button></div>
+</div>
+</div>
+
+<div id="adm" class="hide">
+<header class="glass top" style="margin:0"><h2>📊 ระบบหลังบ้าน (Admin Dashboard)</h2><div style="display:flex;gap:8px"><button class="gb" onclick="fetchStudents()">⟳ รีเฟรช</button><button class="gb" onclick="logoutAdmin()">กลับสู่หน้าแอป</button></div></header>
+<div class="tw"><table><thead><tr><th>ลำดับ</th><th>รหัสนักเรียน</th><th>ชื่อ - นามสกุล</th><th>ชั้นเรียน</th><th>เวลาที่เข้าใช้งาน</th><th>คะแนนแบบทดสอบ</th></tr></thead><tbody id="tb"></tbody></table></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const S={a:1,b:0,c:0,h:0,k:0,r:[]};
+let ghostData=null,viewMode='2d';
+let scene,camera,renderer,controls,box,curveG,ghostG,surf,vM,yM,axM,matC,matG,zs=[],rM=[],started3D=false,webGLOk=true,tw=null,cardId=null,score=0;
+const answered=new Set();
+const tg={v:null,y:null,r:[null,null]};
+const fx=x=>S.a*x*x+S.b*x+S.c;
+const n2=n=>+n.toFixed(2);
+
+const PRESETS=[
+{a:1,b:0,c:0,desc:'<b>1. พาราโบลาพื้นฐาน (y = x²):</b> กราฟหงาย สมมาตรรอบแกน Y มีจุดต่ำสุด (จุดยอด) อยู่ที่จุดกำเนิด (0, 0)'},
+{a:1,b:0,c:-4,desc:'<b>2. กราฟหงาย 2 ราก (y = x² − 4):</b> กราฟเลื่อนลงมา 4 หน่วย ทำให้ตัดแกน X 2 จุด คือ (-2, 0) และ (2, 0)'},
+{a:-1,b:4,c:1,desc:'<b>3. กราฟคว่ำจุดสูงสุด (y = −x² + 4x + 1):</b> เมื่อ a < 0 กราฟจะคว่ำลง มีจุดสูงสุด (จุดยอด) อยู่ที่ (2, 5)'},
+{a:1,b:-4,c:4,desc:'<b>4. สัมผัสแกน X 1 ราก (y = x² − 4x + 4):</b> จัดรูปได้เป็น y = (x − 2)² กราฟแตะแกน X พอดีที่จุดยอด (2, 0)'},
+{a:0,b:2,c:-2,desc:'<b>5. กราฟเส้นตรง (a = 0, y = 2x − 2):</b> เมื่อสัมประสิทธิ์หน้า x² เป็น 0 สมการจะลดรูปเป็นฟังก์ชันเชิงเส้น'}
+];
+
+const HS=[
+{id:'v',t:'จุดยอด',c:'#f59e0b',p:()=>vM?vM.position:new THREE.Vector3(),ok:()=>S.a!==0&&Math.abs(S.k)<=10},
+{id:'y',t:'จุดตัดแกน Y',c:'#ec4899',p:()=>yM?yM.position:new THREE.Vector3(),ok:()=>Math.abs(S.c)<=10},
+{id:'r1',t:'ราก 1',c:'#10b981',p:()=>rM[0]?rM[0].position:new THREE.Vector3(),ok:()=>S.r.length>0},
+{id:'r2',t:'ราก 2',c:'#10b981',p:()=>rM[1]?rM[1].position:new THREE.Vector3(),ok:()=>S.r.length>1},
+{id:'ax',t:'แกนสมมาตร',c:'#f97316',p:()=>new THREE.Vector3(S.h,-9,0),ok:()=>S.a!==0&&Math.abs(S.h)<=10},
+{id:'op',t:'ทิศทางกราฟ',c:'#4f46e5',p:()=>new THREE.Vector3(6,Math.max(-9,Math.min(9,fx(6))),0),ok:()=>Math.abs(fx(6))<=10}
+];
+
+const Q=[
+{q:'จุดยอด (Vertex) ของกราฟ y = −2x² + 4x − 5 คือจุดใด?',o:['(1, 3)','(1, −3)','(−1, 3)','(−1, −3)'],a:1,e:'a = −2, b = 4, c = −5<br>h = −b/2a = −4/(2(−2)) = 1<br>k = −2(1)² + 4(1) − 5 = −3 ดังนั้นจุดยอดคือ (1, −3)'},
+{q:'กราฟ y = x² − 6x + 9 ตัดแกน X ทั้งหมดกี่จุด?',o:['ไม่ตัดแกน X เลย','1 จุด (สัมผัส)','2 จุด','3 จุด'],a:1,e:'Δ = b² − 4ac = 36 − 36 = 0<br>เมื่อ Δ = 0 กราฟสัมผัสแกน X เพียง 1 จุด'},
+{q:'โดเมนและเรนจ์ของ y = x² + 2 คืออะไร?',o:['D = R, R = [2, ∞)','D = [2, ∞), R = R','D = R, R = [−2, ∞)','D = R, R = R'],a:0,e:'x เป็นจำนวนจริงใดๆ ได้ จึง D = R<br>x² ≥ 0 เสมอ ดังนั้น x² + 2 ≥ 2 เรนจ์คือ [2, ∞)'}
+];
+
+function formatGeneral(a,b,c){
+if(a===0&&b===0&&c===0)return'y = 0';
+let s='';
+if(a!==0)s+=(a===1?'':a===-1?'-':a)+'x²';
+if(b!==0){
+const tb=Math.abs(b)===1?'x':Math.abs(b)+'x';
+if(s!=='')s+=(b>0?' + ':' - ')+tb;else s+=(b===1?'':b===-1?'-':b)+'x';
+}
+if(c!==0){if(s!=='')s+=(c>0?' + ':' - ')+Math.abs(c);else s+=c}
+return'y = '+s;
+}
+function formatStandard(a,h,k){
+if(a===0)return'ไม่ใช่ฟังก์ชันกำลังสอง';
+let s=a===1?'':a===-1?'-':a;
+s+=h===0?'x²':`(x ${h>0?'- '+h:'+ '+Math.abs(h)})²`;
+if(k!==0)s+=k>0?' + '+k:' - '+Math.abs(k);
+return'y = '+s;
+}
+
+// --- 2D Canvas Drawing with Smart Non-Overlapping Labels ---
+function draw2D(){
+const cv=$('c2d');
+if(!cv)return;
+const wrap=cv.parentElement;
+const w=wrap.clientWidth||600;
+const h=wrap.clientHeight||400;
+const dpr=Math.min(window.devicePixelRatio||1,2);
+if(cv.width!==w*dpr||cv.height!==h*dpr){
+cv.width=w*dpr;
+cv.height=h*dpr;
+}
+const ctx=cv.getContext('2d');
+ctx.save();
+ctx.scale(dpr,dpr);
+ctx.clearRect(0,0,w,h);
+
+const cx=w/2,cy=h/2;
+const range=10.8;
+const scale=Math.min(w,h)/(range*2);
+const toX=x=>cx+x*scale;
+const toY=y=>cy-y*scale;
+
+// Grid
+ctx.lineWidth=1;
+for(let i=-10;i<=10;i++){
+ctx.strokeStyle=i===0?'#334155':'rgba(99,102,241,0.16)';
+ctx.lineWidth=i===0?2:1;
+ctx.beginPath();ctx.moveTo(toX(i),toY(10.5));ctx.lineTo(toX(i),toY(-10.5));ctx.stroke();
+ctx.beginPath();ctx.moveTo(toX(-10.5),toY(i));ctx.lineTo(toX(10.5),toY(i));ctx.stroke();
+if(i!==0&&i%2===0){
+ctx.fillStyle='#64748b';
+ctx.font='11px Prompt, sans-serif';
+ctx.textAlign='center';
+ctx.fillText(i,toX(i),cy+15);
+ctx.textAlign='right';
+ctx.fillText(i,cx-7,toY(i)+4);
+}
+}
+ctx.fillStyle='#334155';
+ctx.font='bold 12px Prompt, sans-serif';
+ctx.textAlign='left';
+ctx.fillText('X',toX(10.3),cy+4);
+ctx.fillText('Y',cx+6,toY(10.1));
+
+// Symmetry axis
+if(S.a!==0&&Math.abs(S.h)<=10){
+ctx.save();
+ctx.setLineDash([6,5]);
+ctx.strokeStyle='#f97316';
+ctx.lineWidth=1.8;
+ctx.beginPath();
+ctx.moveTo(toX(S.h),toY(10.5));
+ctx.lineTo(toX(S.h),toY(-10.5));
+ctx.stroke();
+ctx.restore();
+}
+
+// Ghost Graph
+if(ghostData){
+ctx.save();
+ctx.setLineDash([7,6]);
+ctx.strokeStyle='#94a3b8';
+ctx.lineWidth=2.5;
+ctx.beginPath();
+let first=true;
+for(let x=-10.5;x<=10.5;x+=0.05){
+const y=ghostData.a*x*x+ghostData.b*x+ghostData.c;
+if(y>=-11&&y<=11){
+if(first){ctx.moveTo(toX(x),toY(y));first=false;}
+else ctx.lineTo(toX(x),toY(y));
+}else first=true;
+}
+ctx.stroke();
+ctx.restore();
+}
+
+// Main Curve
+ctx.save();
+ctx.strokeStyle='#4f46e5';
+ctx.lineWidth=3.5;
+ctx.lineCap='round';
+ctx.lineJoin='round';
+ctx.beginPath();
+let startedPath=false;
+for(let x=-10.5;x<=10.5;x+=0.04){
+const y=fx(x);
+if(y>=-11&&y<=11){
+if(!startedPath){ctx.moveTo(toX(x),toY(y));startedPath=true;}
+else ctx.lineTo(toX(x),toY(y));
+}else{
+startedPath=false;
+}
+}
+ctx.stroke();
+ctx.restore();
+
+// Helper for drawing pill labels cleanly without overlapping axes
+function drawBadge(px,py,text,color,align='left',dy=-10){
+ctx.font='600 11.5px Prompt, sans-serif';
+const padX=7,hBox=20;
+const twText=ctx.measureText(text).width;
+const wBox=twText+padX*2;
+let bx=align==='left'?px+8:(align==='right'?px-wBox-8:px-wBox/2);
+let by=py+dy-hBox/2;
+// Keep inside canvas bounds
+bx=Math.max(8,Math.min(w-wBox-8,bx));
+by=Math.max(8,Math.min(h-hBox-8,by));
+ctx.fillStyle='rgba(255,255,255,0.92)';
+ctx.strokeStyle=color;
+ctx.lineWidth=1.2;
+ctx.beginPath();
+ctx.roundRect(bx,by,wBox,hBox,6);
+ctx.fill();
+ctx.stroke();
+ctx.fillStyle='#1e293b';
+ctx.textAlign='left';
+ctx.fillText(text,bx+padX,by+14);
+}
+
+function drawPt(x,y,col,r=5.5){
+ctx.fillStyle=col;
+ctx.strokeStyle='#fff';
+ctx.lineWidth=2;
+ctx.beginPath();
+ctx.arc(toX(x),toY(y),r,0,Math.PI*2);
+ctx.fill();
+ctx.stroke();
+}
+
+// Roots (X-intercepts)
+S.r.forEach((rx,idx)=>{
+if(Math.abs(rx)<=10){
+const isAlsoVertex=(S.a!==0&&Math.abs(rx-S.h)<0.05&&Math.abs(S.k)<0.05);
+if(!isAlsoVertex){
+drawPt(rx,0,'#10b981',5.5);
+const align=rx<0?'right':'left';
+const dy=S.a>=0?-16:18;
+drawBadge(toX(rx),toY(0),`ราก${S.r.length>1?idx+1:''} (${n2(rx)}, 0)`,'#10b981',align,dy);
+}
+}
+});
+
+// Check if Vertex and Y-intercept overlap
+const sameVY=(S.a!==0&&Math.abs(S.h)<0.05&&Math.abs(S.k-S.c)<0.05);
+
+if(sameVY&&Math.abs(S.k)<=10){
+drawPt(0,S.k,'#f59e0b',6.5);
+const dy=S.a>0?18:-18;
+drawBadge(toX(0),toY(S.k),`จุดยอด & ตัด Y (0, ${n2(S.k)})`,'#f59e0b','left',dy);
+}else{
+if(Math.abs(S.c)<=10){
+drawPt(0,S.c,'#ec4899',5.5);
+drawBadge(toX(0),toY(S.c),`ตัด Y (0, ${n2(S.c)})`,'#ec4899','left',-12);
+}
+if(S.a!==0&&Math.abs(S.h)<=10&&Math.abs(S.k)<=10){
+drawPt(S.h,S.k,'#f59e0b',6.5);
+const align=S.h<0?'right':'left';
+const dy=S.a>0?18:-18;
+drawBadge(toX(S.h),toY(S.k),`จุดยอด (${n2(S.h)}, ${n2(S.k)})`,'#f59e0b',align,dy);
+}
+}
+
+ctx.restore();
+}
+
+// --- 3D WebGL Setup ---
+function buildCurve3D(g,fn,color,dashed=false){
+g.children.forEach(m=>{if(m.geometry)m.geometry.dispose();if(m.material)m.material.dispose();});
+g.clear();
+const pts=[];
+for(let x=-10;x<=10.001;x+=0.15){
+const y=fn(x);
+if(y>=-10.2&&y<=10.2)pts.push(new THREE.Vector3(x,y,0));
+}
+if(pts.length<2)return;
+const curve=new THREE.CatmullRomCurve3(pts);
+const tubeGeo=new THREE.TubeGeometry(curve,160,dashed?0.07:0.13,10,false);
+const mat=new THREE.MeshStandardMaterial({
+color:color,
+roughness:0.3,
+metalness:0.2,
+transparent:dashed,
+opacity:dashed?0.55:1
+});
+const mesh=new THREE.Mesh(tubeGeo,mat);
+g.add(mesh);
+}
+
+function ball3D(col,r){
+const m=new THREE.Mesh(
+new THREE.SphereGeometry(r,24,18),
+new THREE.MeshStandardMaterial({color:col,roughness:0.25,metalness:0.25,emissive:col,emissiveIntensity:0.2})
+);
+scene.add(m);
+return m;
+}
+
+function info(id){
+const{a,b,c,h,k,r}=S;
+const d=b*b-4*a*c;
+if(id==='v')return['จุดยอด (Vertex)',`${a>0?'จุดต่ำสุด':'จุดสูงสุด'}ของกราฟอยู่ที่ <b>(${n2(h)}, ${n2(k)})</b><br>หาได้จาก h = −b/2a และ k = f(h)`];
+if(id==='y')return['จุดตัดแกน Y',`แทน x = 0 จะได้ y = c = <b>${c}</b><br>จุดตัดแกน Y คือ (0, ${c})`];
+if(id==='r1'||id==='r2')return['จุดตัดแกน X (ราก)',a===0?`เมื่อ a = 0 กราฟเป็นเส้นตรง ตัดแกน X ที่ x = <b>${r.map(n2).join(', ')}</b>`:`แก้สมการ ax² + bx + c = 0 ได้ x = <b>${r.map(n2).join(', ')}</b><br>Δ = b² − 4ac = ${n2(d)} ${d>0?'(มี 2 ราก)':d===0?'(มี 1 ราก)':'(ไม่มีราก)'}`];
+if(id==='ax')return['แกนสมมาตร',`เส้น x = <b>${n2(h)}</b> แบ่งกราฟเป็นสองซีกที่เหมือนกัน เสมือนกระจกเงา`];
+return['ทิศทางและความกว้าง',`ตอนนี้ a = <b>${a}</b> ทำให้กราฟ<b>${a>0?'หงาย':a<0?'คว่ำ':'เป็นเส้นตรง'}</b><br>ค่า |a| ยิ่งมาก กราฟยิ่งแคบ ยิ่งน้อยกราฟยิ่งกว้าง`];
+}
+function renderCard(){
+const[t,b]=info(cardId);
+$('card').innerHTML=`<button class="x" onclick="closeCard()">✕</button><h4>${t}</h4><p>${b}</p>`;
+}
+function pick(id){
+cardId=id;
+renderCard();
+const c=$('card');
+c.classList.remove('on');
+void c.offsetWidth;
+c.classList.add('on');
+if(controls)tw=HS.find(o=>o.id===id).p().clone().multiplyScalar(.4);
+}
+window.closeCard=()=>{cardId=null;$('card').classList.remove('on')};
+
+function init3D(){
+if(started3D)return;
+if(typeof THREE==='undefined'){webGLOk=false;return;}
+try{
+started3D=true;
+box=$('view');
+const w=box.clientWidth||600;
+const h=box.clientHeight||400;
+scene=new THREE.Scene();
+camera=new THREE.PerspectiveCamera(45,w/h,0.1,300);
+camera.position.set(14,8,25);
+renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setSize(w,h);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+box.appendChild(renderer.domElement);
+
+controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.dampingFactor=0.08;
+controls.minDistance=8;
+controls.maxDistance=75;
+controls.autoRotateSpeed=1.5;
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x93c5fd,0.9));
+const sun=new THREE.DirectionalLight(0xffffff,0.95);
+sun.position.set(12,24,18);
+scene.add(sun);
+
+// Floor & Back Grids
+const g1=new THREE.GridHelper(20,20,0x6366f1,0xc7d2fe);
+g1.position.y=-10;
+scene.add(g1);
+const g2=new THREE.GridHelper(20,20,0x6366f1,0xc7d2fe);
+g2.rotation.x=Math.PI/2;
+g2.position.z=-10;
+scene.add(g2);
+
+// Bounding Box & Axes
+scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(20,20,20)),new THREE.LineBasicMaterial({color:0xa5b4fc})));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(-10,0,0),20.6,0x334155,0.6,0.3));
+scene.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0),new THREE.Vector3(0,-10,0),20.6,0x334155,0.6,0.3));
+
+// 3D Ribbon Surface
+const sg=new THREE.PlaneGeometry(20,5,100,1);
+const pa=sg.attributes.position;
+for(let i=0;i<pa.count;i++)zs.push(pa.getY(i));
+surf=new THREE.Mesh(sg,new THREE.MeshStandardMaterial({
+color:0x6366f1,
+transparent:true,
+opacity:0.28,
+side:THREE.DoubleSide,
+roughness:0.3,
+metalness:0.1
+}));
+surf.frustumCulled=false;
+scene.add(surf);
+
+curveG=new THREE.Group();
+ghostG=new THREE.Group();
+scene.add(curveG,ghostG);
+
+tg.v=new THREE.Vector3();
+tg.y=new THREE.Vector3();
+tg.r=[new THREE.Vector3(),new THREE.Vector3()];
+
+vM=ball3D(0xf59e0b,0.38);
+yM=ball3D(0xec4899,0.32);
+rM=[ball3D(0x10b981,0.32),ball3D(0x10b981,0.32)];
+
+axM=new THREE.Mesh(new THREE.PlaneGeometry(5,20),new THREE.MeshBasicMaterial({color:0xf97316,transparent:true,opacity:0.14,side:THREE.DoubleSide,depthWrite:false}));
+axM.rotation.y=Math.PI/2;
+scene.add(axM);
+
+HS.forEach(o=>{
+const el=document.createElement('button');
+el.className='hs';
+el.style.setProperty('--c',o.c);
+el.innerHTML=`<i></i><span>${o.t}</span>`;
+el.onclick=()=>pick(o.id);
+$('hs').appendChild(el);
+o.el=el;
+});
+
+new ResizeObserver(()=>{
+if(viewMode!=='3d')return;
+const nw=box.clientWidth,nh=box.clientHeight;
+if(!nw||!nh)return;
+renderer.setSize(nw,nh);
+camera.aspect=nw/nh;
+camera.updateProjectionMatrix();
+}).observe(box);
+
+update3DScene();
+loop3D();
+}catch(e){
+console.error('3D init error:',e);
+webGLOk=false;
+}
+}
+
+function update3DScene(){
+if(!started3D||!webGLOk)return;
+buildCurve3D(curveG,fx,0x4f46e5,false);
+if(ghostData){
+buildCurve3D(ghostG,x=>ghostData.a*x*x+ghostData.b*x+ghostData.c,0x94a3b8,true);
+}else{
+ghostG.children.forEach(m=>{if(m.geometry)m.geometry.dispose();});
+ghostG.clear();
+}
+const p=surf.geometry.attributes.position;
+for(let i=0;i<p.count;i++){
+const x=p.getX(i);
+const y=Math.max(-10,Math.min(10,fx(x)));
+p.setXYZ(i,x,y,zs[i]);
+}
+p.needsUpdate=true;
+surf.geometry.computeVertexNormals();
+
+tg.v.set(S.h,S.k,0);
+tg.y.set(0,S.c,0);
+S.r.forEach((x,i)=>tg.r[i].set(x,0,0));
+rM.forEach((m,i)=>{m.visible=i<S.r.length&&Math.abs(S.r[i])<=10});
+vM.visible=S.a!==0&&Math.abs(S.h)<=10&&Math.abs(S.k)<=10;
+yM.visible=Math.abs(S.c)<=10;
+axM.visible=S.a!==0&&Math.abs(S.h)<=10;
+axM.position.x=S.h;
+}
+
+function loop3D(){
+requestAnimationFrame(loop3D);
+if(viewMode!=='3d'||!renderer)return;
+if(tw){
+controls.target.lerp(tw,0.1);
+if(controls.target.distanceTo(tw)<0.02)tw=null;
+}
+controls.update();
+vM.position.lerp(tg.v,0.25);
+yM.position.lerp(tg.y,0.25);
+rM.forEach((m,i)=>m.position.lerp(tg.r[i],0.25));
+const w=box.clientWidth||600,h=box.clientHeight||400;
+HS.forEach(o=>{
+const on=o.ok();
+o.el.style.display=on?'':'none';
+if(!on)return;
+const v=o.p().clone().project(camera);
+o.el.style.visibility=v.z<1?'visible':'hidden';
+o.el.style.transform=`translate(${(v.x+1)/2*w-8}px,${(1-v.y)/2*h-8}px)`;
+});
+renderer.render(scene,camera);
+}
+
+window.setMode=mode=>{
+viewMode=mode;
+$('btn3d').classList.toggle('on',mode==='3d');
+$('btn2d').classList.toggle('on',mode==='2d');
+if(mode==='3d'){
+$('view2d').classList.add('hide');
+$('view').classList.remove('hide');
+$('hs').classList.remove('hide');
+$('hint-txt').innerHTML='ลาก = หมุน · คลิกขวาลาก = แพน · ล้อเมาส์ = ซูม<br>คลิกจุดเรืองแสงเพื่อดูคำอธิบาย';
+if(!started3D)init3D();
+setTimeout(()=>{
+if(renderer&&box){
+const nw=box.clientWidth||600,nh=box.clientHeight||400;
+renderer.setSize(nw,nh);
+camera.aspect=nw/nh;
+camera.updateProjectionMatrix();
+update3DScene();
+}
+},50);
+}else{
+$('view').classList.add('hide');
+$('hs').classList.add('hide');
+$('view2d').classList.remove('hide');
+$('hint-txt').textContent='โหมด 2D: แสดงพิกัดแกน X, Y จุดยอด และจุดตัดอย่างชัดเจน';
+draw2D();
+}
+};
+
+window.applyPreset=(idx,btn)=>{
+const p=PRESETS[idx];
+if(!p)return;
+document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));
+if(btn)btn.classList.add('on');
+[['a',p.a],['b',p.b],['c',p.c]].forEach(([k,v])=>{$('slide-'+k).value=v;$('num-'+k).value=v});
+$('preset-desc').innerHTML='<b>💡 คำอธิบายตัวอย่าง:</b> '+p.desc;
+closeCard();
+updateApp();
+};
+
+function updateApp(){
+const a=parseFloat($('num-a').value)||0,b=parseFloat($('num-b').value)||0,c=parseFloat($('num-c').value)||0;
+Object.assign(S,{a,b,c});
+S.h=a===0?0:-b/(2*a);
+S.k=a===0?c:c-b*b/(4*a);
+const r=[];
+if(a!==0){
+const d=b*b-4*a*c;
+if(d>0)r.push((-b+Math.sqrt(d))/(2*a),(-b-Math.sqrt(d))/(2*a));
+else if(d===0)r.push(S.h);
+}else if(b!==0)r.push(-c/b);
+S.r=r;
+$('eg').textContent=formatGeneral(a,b,c);
+$('es').textContent=formatStandard(a,n2(S.h),n2(S.k));
+$('pv').textContent=a===0?'ไม่มี':`(${n2(S.h)}, ${n2(S.k)})`;
+$('py').textContent=`(0, ${c})`;
+$('px').textContent=r.length?'x = '+r.map(x=>n2(x)).join(', '):'ไม่มีจุดตัด';
+$('pr').textContent=a>0?`y ≥ ${n2(S.k)}`:a<0?`y ≤ ${n2(S.k)}`:'R';
+
+draw2D();
+if(started3D)update3DScene();
+if(cardId)renderCard();
+}
+
+window.saveGhost=()=>{
+ghostData={a:S.a,b:S.b,c:S.c};
+draw2D();
+if(started3D)update3DScene();
+};
+window.clearGhost=()=>{
+ghostData=null;
+draw2D();
+if(started3D)update3DScene();
+};
+window.toggleRot=()=>{
+if(viewMode!=='3d')setMode('3d');
+if(!controls)return;
+controls.autoRotate=!controls.autoRotate;
+$('bar').classList.toggle('on',controls.autoRotate);
+};
+window.resetCam=()=>{
+if(!camera||!controls)return;
+camera.position.set(14,8,25);
+controls.target.set(0,0,0);
+tw=null;
+};
+window.resetValues=()=>{
+applyPreset(0,document.querySelector('.preset-btn'));
+window.clearGhost();
+closeCard();
+$('cr').classList.add('hide');
+};
+window.tab=i=>{
+document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',i===j));
+document.querySelectorAll('.pane').forEach((p,j)=>p.classList.toggle('hide',i!==j));
+};
+window.checkChallenge=()=>{
+const box=$('cr');
+const up=S.a>0,h2=Math.abs(S.h-2)<.01,k3=Math.abs(S.k+3)<.01;
+box.className=up&&h2&&k3?'ok':'no';
+if(up&&h2&&k3)box.innerHTML='🎉 สุดยอด! คุณปรับกราฟได้ถูกต้อง (กราฟหงาย และจุดยอดอยู่ที่ (2, −3))';
+else{
+let m='❌ ยังไม่ถูกต้อง<br>';
+if(!up)m+='- กราฟยังไม่หงาย (a ต้องมากกว่า 0)<br>';
+if(!h2||!k3)m+=`- จุดยอดตอนนี้คือ (${n2(S.h)}, ${n2(S.k)}) ยังไม่ใช่ (2, −3)`;
+box.innerHTML=m;
+}
+};
+window.renderQuiz=()=>{
+const L=['ก','ข','ค','ง'];
+$('qz').innerHTML=Q.map((q,i)=>`<div class="qi"><p>${i+1}. ${q.q}</p>${q.o.map((o,j)=>`<button class="opt" onclick="checkQuiz(${i},${j},this)">${L[j]}. ${o}</button>`).join('')}<div class="ex" id="exp-${i}"><b>เฉลยและวิธีทำ:</b> ตอบข้อ ${L[q.a]}<br>${q.e}</div></div>`).join('');
+};
+window.checkQuiz=(qi,oi,btn)=>{
+const q=Q[qi];
+if(!answered.has(qi)){
+answered.add(qi);
+if(oi===q.a)score++;
+if(typeof window.updateScoreInFirebase==='function')window.updateScoreInFirebase(score);
+$('qs').textContent=`คะแนน ${score}/${Q.length}`;
+}
+[...btn.parentElement.querySelectorAll('.opt')].forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add('ok')});
+if(oi!==q.a)btn.classList.add('no');
+$('exp-'+qi).classList.add('on');
+};
+window.startLesson=name=>{
+$('un').textContent=name;
+$('rg').classList.add('hide');
+$('app').classList.remove('hide');
+setTimeout(()=>{
+draw2D();
+init3D();
+},100);
+};
+
+window.addEventListener('resize',()=>{if(viewMode==='2d')draw2D();});
+
+['a','b','c'].forEach(k=>{
+const s=$('slide-'+k),n=$('num-'+k);
+s.oninput=()=>{
+n.value=s.value;
+document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));
+updateApp();
+};
+n.oninput=()=>{
+s.value=n.value;
+document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));
+updateApp();
+};
+});
+renderQuiz();
+updateApp();
+</script>
+
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import{getAuth,signInAnonymously,signInWithCustomToken}from"https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import{getFirestore,collection,addDoc,getDocs,updateDoc,doc}from"https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const appId=typeof __app_id!=='undefined'?__app_id:'demo-quadratic-app-id';
+const cfgStr=typeof __firebase_config!=='undefined'?__firebase_config:'{}';
+let db,auth,col,online=false,sid=null;
+
+async function boot(){
+try{
+if(!cfgStr||cfgStr==='{}')throw new Error('no firebase config');
+const app=initializeApp(JSON.parse(cfgStr));
+db=getFirestore(app);
+auth=getAuth(app);
+if(typeof __initial_auth_token!=='undefined'&&__initial_auth_token)await signInWithCustomToken(auth,__initial_auth_token);
+else await signInAnonymously(auth);
+col=collection(db,'artifacts',appId,'public','data','students');
+online=true;
+}catch(e){
+console.warn('Offline mode:',e);
+}
+if(!online)$('ofl').classList.remove('hide');
+$('ld').classList.add('hide');
+$('rg').classList.remove('hide');
+}
+boot();
+
+function esc(u){
+return(u||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+window.handleRegistration=async e=>{
+e.preventDefault();
+const name=$('rn').value,studentId=$('ri').value,className=$('rc').value,btn=$('rb');
+btn.disabled=true;
+btn.textContent='กำลังบันทึกข้อมูล...';
+try{
+if(online){
+const r=await addDoc(col,{name,studentId,className,timestamp:new Date().toISOString(),uid:auth.currentUser.uid,quizAttempted:false,quizScore:0});
+sid=r.id;
+}
+window.startLesson(name);
+}catch(err){
+console.error(err);
+alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+btn.disabled=false;
+btn.textContent='เข้าสู่บทเรียน';
+}
+};
+
+window.updateScoreInFirebase=async s=>{
+if(!online||!sid)return;
+try{
+await updateDoc(doc(db,'artifacts',appId,'public','data','students',sid),{quizScore:s,quizAttempted:true});
+}catch(err){
+console.error(err);
+}
+};
+
+window.showAdminModal=()=>{
+$('am').classList.remove('hide');
+$('ap').value='';
+$('ae').classList.add('hide');
+};
+window.closeAdminModal=()=>$('am').classList.add('hide');
+window.verifyAdminPassword=()=>{
+if($('ap').value==='123456'){
+closeAdminModal();
+$('rg').classList.add('hide');
+$('app').classList.add('hide');
+$('adm').classList.remove('hide');
+window.fetchStudents();
+}else $('ae').classList.remove('hide');
+};
+window.logoutAdmin=()=>{
+$('adm').classList.add('hide');
+if($('un').textContent!=='')$('app').classList.remove('hide');
+else $('rg').classList.remove('hide');
+};
+
+window.fetchStudents=async()=>{
+const tb=$('tb');
+const msg=(t,c)=>{tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:30px;color:${c}">${t}</td></tr>`};
+if(!online){msg('โหมดออฟไลน์: ไม่มีการเชื่อมต่อฐานข้อมูล','#64748b');return}
+msg('กำลังโหลดข้อมูล...','#64748b');
+try{
+const snap=await getDocs(col);
+const list=[];
+snap.forEach(d=>list.push({id:d.id,...d.data()}));
+list.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+if(!list.length){msg('ยังไม่มีผู้ลงทะเบียน','#64748b');return}
+tb.innerHTML=list.map((s,i)=>{
+const t=new Date(s.timestamp).toLocaleString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const sc=s.quizAttempted?`<b style="color:#4f46e5">${s.quizScore} / 3</b>`:'<span style="color:#94a3b8">ยังไม่ทำแบบทดสอบ</span>';
+return`<tr><td>${i+1}</td><td><b>${esc(s.studentId)}</b></td><td>${esc(s.name)}</td><td>${esc(s.className)}</td><td style="font-size:12px;color:#64748b">${t}</td><td>${sc}</td></tr>`;
+}).join('');
+}catch(err){
+console.error(err);
+msg('เกิดข้อผิดพลาดในการโหลดข้อมูล: '+esc(err.message),'#dc2626');
+}
+};
+</script>
+</body>
+</html>
